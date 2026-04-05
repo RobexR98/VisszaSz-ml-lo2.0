@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 GTA VI Visszaszámláló 🚨</title>
+    <style>
+        /* --- ALAP STÍLUSOK --- */
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            margin: 0;
+            padding: 0;
+            padding-top: 50px;
+            overflow: hidden;
+        }
+
+        /* --- VIDEÓS HÁTTÉR STÍLUSAI --- */
+        #video-background {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: 1; 
+            object-fit: cover;
+            background-color: black;
+        }
+
+        #countdown-display {
+            position: relative; 
+            z-index: 2; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .logo-container { margin-bottom: 20px; }
+        .gta-logo { height: 150px; width: auto; display: block; margin: 0 auto; }
+        
+        #main-title { 
+            padding: 10px 20px;
+            display: inline-block;
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #ffffff;
+            margin: 0 auto 30px auto;
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8); 
+        }
+        
+        .exclamation {
+            color: #e066ff;
+        }
+
+        /* --- SZÁMLÁLÓ RÉSZ --- */
+        #countdown {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .time-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* MÓDOSÍTVA: Lila feliratok */
+        .label {
+            font-size: 1.0em;
+            color: #e066ff; 
+            text-transform: uppercase;
+            margin-top: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        
+        .digit-container {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* MÓDOSÍTVA: Átlátszó kockák */
+        .flip-digit {
+            position: relative;
+            width: 40px; 
+            height: 60px; 
+            overflow: hidden;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.3); /* Enyhén átlátszó sötétítés */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .flip-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transition: transform 0.6s ease-in-out; 
+        }
+        
+        .digit-place {
+            height: 60px;
+            line-height: 60px;
+            font-size: 3em;
+            font-weight: bold;
+            color: #e066ff;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 1);
+        }
+
+        /* MÓDOSÍTVA: Átlátszó hangerőszabályzó */
+        .volume-control {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.4); 
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px); /* Egy kis homályosítás az olvashatóságért */
+            color: #fff;
+        }
+        
+        .volume-control input[type="range"] { width: 150px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    
+    <video autoplay muted playsinline id="video-background">
+        <source src="GTA VI trailer.mp4" type="video/mp4">
+    </video>
+
+    <audio id="background-music" loop>
+        <source src="zene.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="countdown-display">
+        <div class="logo-container">
+            <img src="gta6_logo.png" alt="GTA VI Logo" class="gta-logo">
+        </div>
+
+        <h1 id="main-title">
+            Konzolos Megjelenésig Hátralévő Idő<span class="exclamation">!</span>
+        </h1>
+        
+        <div id="countdown"></div>
+
+        <div class="volume-control">
+            <label for="volume">Hangerő:</label>
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.2">
+        </div>
+
+        <p id="music-warning" style="color: #ffaa00; font-weight: bold; margin-top: 20px; display: none;">
+            🔔 Kattints bárhova a zene indításához!
+        </p>
+    </div>
+
+    <script>
+        const targetDate = new Date("November 19, 2026 00:00:00").getTime();
+        
+        const audio = document.getElementById('background-music');
+        const warning = document.getElementById('music-warning');
+        const volumeSlider = document.getElementById('volume');
+        const countdownElement = document.getElementById('countdown');
+        const videoElement = document.getElementById('video-background');
+
+        const MUSIC_FILE_1 = 'zene.mp3';
+        const MUSIC_FILE_2 = 'zene2.mp3';
+        const VIDEO_FILE_1 = 'GTA VI trailer.mp4';
+        const VIDEO_FILE_2 = 'GTA VI trailer2.mp4';
+        
+        let currentVideo = VIDEO_FILE_1;
+        let currentMusicFile = MUSIC_FILE_1;
+        let interval = null;
+        let previousValues = {}; 
+        let isFirstRun = true; 
+
+        function createTimeUnitHTML(label) {
+            return `
+                <div class="time-unit">
+                    <div class="digit-container" data-unit="${label.toLowerCase()}"></div>
+                    <div class="label">${label}</div>
+                </div>
+            `;
+        }
+
+        function createFlipDigitHTML(digitId) {
+            const numbersHTML = Array.from({ length: 10 }, (_, i) => `<div class="digit-place">${i}</div>`).join('');
+            return `<div class="flip-digit"><div class="flip-card" id="${digitId}">${numbersHTML}</div></div>`;
+        }
+
+        function initializeCountdownStructure() {
+            const units = ["HÓNAP", "HÉT", "NAP", "ÓRA", "PERC", "MÁSODPERC"];
+            let html = '';
+            units.forEach(unit => html += createTimeUnitHTML(unit));
+            countdownElement.innerHTML = html;
+        }
+
+        function updateDigit(digitElement, newValue, isTens = false) {
+            const unit = digitElement.parentNode.parentNode.dataset.unit;
+            const key = unit + (isTens ? '_tens' : '_ones');
+            const oldValue = previousValues[key] === undefined ? -1 : previousValues[key]; 
+
+            if (oldValue !== newValue) {
+                const digitHeight = 60; 
+                const newY = newValue * digitHeight * -1; 
+                digitElement.style.transition = (isFirstRun) ? 'none' : 'transform 0.6s ease-in-out';
+                digitElement.style.transform = `translateY(${newY}px)`;
+                previousValues[key] = newValue;
+            }
+        }
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            let remainingMs = targetDate - now;
+
+            // ZENE VÁLTÁS: Ha kevesebb mint 2 perc (120.000 ms) van hátra
+            if (remainingMs <= 120000 && remainingMs > 0 && currentMusicFile !== MUSIC_FILE_2) {
+                startMusic(MUSIC_FILE_2, true);
+            }
+
+            if (remainingMs < 0) {
+                clearInterval(interval);
+                countdownElement.innerHTML = "<div style='font-size: 2.5em; color:#e066ff; font-weight:bold;'>🎉 MEGJELENT! 🎉</div>";
+                return;
+            }
+            
+            const msInSecond = 1000, msInMinute = 60000, msInHour = 3600000, msInDay = 86400000;
+            const msInWeek = msInDay * 7, averageMsInMonth = msInDay * 30.4375;
+
+            let temp = remainingMs;
+            const values = {
+                'hónap': Math.floor(temp / averageMsInMonth),
+                'hét': Math.floor((temp %= averageMsInMonth) / msInWeek),
+                'nap': Math.floor((temp %= msInWeek) / msInDay),
+                'óra': Math.floor((temp %= msInDay) / msInHour),
+                'perc': Math.floor((temp %= msInHour) / msInMinute),
+                'másodperc': Math.floor((temp %= msInMinute) / msInSecond)
+            };
+
+            Object.entries(values).forEach(([unit, value]) => {
+                const container = document.querySelector(`.digit-container[data-unit="${unit}"]`);
+                if (!container) return;
+                if (container.children.length === 0) {
+                    container.innerHTML = createFlipDigitHTML(`${unit}_tens`) + createFlipDigitHTML(`${unit}_ones`);
+                }
+                updateDigit(document.getElementById(`${unit}_tens`), Math.floor(value / 10), true);
+                updateDigit(document.getElementById(`${unit}_ones`), value % 10, false);
+            });
+        }
+
+        function switchVideo() {
+            currentVideo = (currentVideo === VIDEO_FILE_1) ? VIDEO_FILE_2 : VIDEO_FILE_1;
+            videoElement.src = currentVideo;
+            videoElement.play();
+        }
+        
+        videoElement.addEventListener('ended', switchVideo);
+        
+        function startMusic(file, loop = true) {
+            currentMusicFile = file;
+            audio.src = file;
+            audio.loop = loop;
+            audio.volume = volumeSlider.value;
+            audio.play().catch(() => warning.style.display = 'block');
+        }
+
+        initializeCountdownStructure(); 
+        startMusic(MUSIC_FILE_1, true);
+        
+        setTimeout(() => {
+            updateCountdown(); 
+            isFirstRun = false;
+            interval = setInterval(updateCountdown, 1000); 
+        }, 100); 
+
+        document.addEventListener('click', () => {
+            audio.play();
+            videoElement.play();
+            warning.style.display = 'none';
+        }, { once: true });
+
+        volumeSlider.addEventListener('input', (e) => audio.volume = e.target.value);
+    </script>
+</body>
+</html>
